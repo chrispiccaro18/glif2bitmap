@@ -1,0 +1,109 @@
+./lib_to_aseprite.py --lib ./input/lib.plist --glyphs-dir ./input/glyphs --out out/font.aseprite --png-size 64 --skip-missing --skip-curves
+
+# PNG sheet
+./lib_to_aseprite.py --lib ./input/lib.plist --glyphs-dir ./input/glyphs --out out/font.png --png-size 64 --skip-missing --map-out out/font_map.json
+
+# Proper .aseprite
+./lib_to_aseprite.py --lib ./input/lib.plist --glyphs-dir ./input/glyphs --out out/font.aseprite --png-size 64 --skip-missing --skip-curves --map-out out/font_map.json
+
+
+./lib_to_aseprite.py \
+  --lib ./input/lib.plist \
+  --glyphs-dir ./input/glyphs \
+  --out out/font.png \
+  --png-size 64 \
+  --skip-missing \
+  --flatten-eps 1.0 \
+  --map-out out/font_map.json \
+  --debug
+
+  ./lib_to_aseprite.py \
+  --lib ./input/lib.plist \
+  --glyphs-dir ./input/glyphs \
+  --out out/font-32.png \
+  --png-size 32 \
+  --skip-missing \
+  --flatten-eps 1.0 \
+  --map-out out/font_map.json \
+  --debug
+
+  ./lib_to_aseprite.py \
+  --lib ./input/lib.plist \
+  --glyphs-dir ./input/glyphs \
+  --out out/font-8.png \
+  --png-size 8 \
+  --skip-missing \
+  --flatten-eps 1.0 \
+  --map-out out/font_map.json \
+  --debug
+
+
+./lib_to_aseprite.py \
+  --lib ./input/lib.plist \
+  --glyphs-dir ./input/glyphs \
+  --out out/font-16-thin.png \
+  --png-size 16 \
+  --oversample 16 \
+  --stroke-px 0.125 \
+  --hard-threshold \
+  --flatten-eps 1.0 \
+  --map-out out/font-16-thin.json \
+  --debug
+
+  ./lib_to_aseprite.py \
+  --lib ./input/lib.plist \
+  --glyphs-dir ./input/glyphs \
+  --out out/font-16-thin.png \
+  --png-size 16 \
+  --oversample 1 \
+  --stroke-px 0.01 \
+  --flatten-eps 1.0 \
+  --map-out out/font-16-thin.json \
+  --debug
+
+./lib_to_aseprite.py \
+  --lib ./input/lib.plist \
+  --glyphs-dir ./input/glyphs \
+  --out out/font-16-grid.png \
+  --png-size 16 \
+  --cell-width 16 --cell-height 16 \
+  --align center --pad-px 1 \
+  --oversample 8 --flatten-eps 1.0 \
+  --stroke-px 0.12 --hard-threshold \
+  --map-out out/font-16-grid.json \
+  --debug
+
+./lib_to_aseprite.py \
+  --lib ./input/lib.plist \
+  --glyphs-dir ./input/glyphs \
+  --out out/font-16-caps12-left.aseprite \
+  --png-size 16 \
+  --cell-width 16 --cell-height 16 \
+  --cap-height-px 12 --align left --pad-px 0 \
+  --oversample 8 --flatten-eps 1.0 \
+  --hard-threshold \
+  --map-out out/font-16-caps12-left.json
+
+  ./lib_to_aseprite.py \
+  --lib ./input/lib.plist \
+  --glyphs-dir ./input/glyphs \
+  --out out/font-16-caps12.aseprite \
+  --png-size 16 \
+  --cell-width 16 --cell-height 16 \
+  --cap-height-px 12 --align left --pad-px 0 \
+  --oversample 8 --flatten-eps 1.0 \
+  --hard-threshold \
+  --map-out out/font-16-caps12.json
+
+
+./lib_to_aseprite.py \
+  --lib ./input/lib.plist \
+  --glyphs-dir ./input/glyphs \
+  --out out/font-16-grid.png \
+  --png-size 16 \
+  --cell-width 16 --cell-height 16 \
+  --align left --pad-px 0 \
+  --oversample 8 --flatten-eps 1.0 \
+  --stroke-px 0.12 --hard-threshold \
+  --map-out out/font-16-grid.json \
+  --debug
