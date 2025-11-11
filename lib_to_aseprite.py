@@ -264,48 +264,42 @@ def write_svg(svg_path: Path, contours, *,
                    pad_px: float, align: str, eps_px: float,
                    debug: bool = False):
 
-    # 1) Flatten to an SVG path (this function FLIPS Y already)
-    d = contours_to_svg_path(contours, eps_px=eps_px)
+    d = contours_to_svg_path(contours, eps_px=eps_px)  # flips Y already
 
-    # 2) Choose uniform scale: prefer capHeight if provided, else em box
+    # Scale: prefer capHeight if provided, else em box
     if cap_height_px and cap:
         scale = cap_height_px / float(cap)
-        if debug: print(f"[debug] scale by cap: cap={cap} -> {scale:.4f}")
+        if debug: print(f"[debug] scale by cap: {cap} → {scale:.4f}")
     else:
-        em_h = asc - desc  # font units
+        em_h = asc - desc
         usable_h_px = max(1.0, cell_h - 2.0*pad_px)
         scale = usable_h_px / float(em_h)
-        if debug: print(f"[debug] scale by em: em_h={em_h} usable_h_px={usable_h_px} -> {scale:.4f}")
+        if debug: print(f"[debug] scale by em: {em_h} → {scale:.4f}")
 
-    # 3) Convert padding to font units (so viewBox math is in font units)
     pad_fu = pad_px / scale
     usable_w_px = max(1.0, cell_w - 2.0*pad_px)
     vw_fu = usable_w_px / scale
-    vh_fu = (cell_h - 2.0*pad_px) / scale   # ≈ asc - desc if em-scaling
+    vh_fu = (cell_h - 2.0*pad_px) / scale
 
-    # 4) Vertical anchor: put baseline y=0 inside the box consistently.
-    #    With Y already flipped in the path, baseline is at SVG y=0.
-    #    Top of viewBox must be at -(asc + pad), so baseline sits at pad from the top.
+    # Vertical: put baseline at fixed position: pad + asc from the top
     vx0_fu = -pad_fu
     vy0_fu = -(asc + pad_fu)
 
-    # 5) Horizontal placement ignoring advance width
+    # Horizontal: align bbox left or center
     if contours:
-        x0, _, x1, _ = bbox(contours)   # in font units
+        x0, _, x1, _ = bbox(contours)  # font units
     else:
-        x0, x1 = 0.0, 0.0
-    gx_mid = 0.5*(x0 + x1)
+        x0 = x1 = 0.0
+    gx_mid = 0.5 * (x0 + x1)
 
     if align == "left":
-        # align left edge of glyph bbox to left padding
+        # left edge of glyph bbox sits at pixel 0 (+pad if any)
         vx0_fu = x0 - pad_fu
     else:
-        # center bbox within the usable width
-        usable_center_fu = (vx0_fu + pad_fu) + vw_fu*0.5
+        usable_center_fu = (vx0_fu + pad_fu) + vw_fu * 0.5
         dx = gx_mid - usable_center_fu
         vx0_fu += dx
 
-    # 6) Emit SVG: fixed pixel size + baseline-consistent viewBox
     svg = f'''<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg"
      width="{cell_w}" height="{cell_h}"
@@ -314,8 +308,6 @@ def write_svg(svg_path: Path, contours, *,
 </svg>
 '''
     svg_path.write_text(svg, encoding="utf-8")
-
-
 
 def run(cmd):
     proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -450,6 +442,7 @@ def main():
                 # "--property", "text-rendering=geometricPrecision",
                 # "--property", "image-rendering=optimizeSpeed",
                 # "--disable-antialias",
+                "-b", "transparent",
                 "-a",
                 "-o", str(png_path),
                 str(svg_path),
@@ -471,8 +464,11 @@ def main():
                     print(f"ERROR: rsvg-convert (oversample) failed for {name}: {err}", file=sys.stderr)
                     sys.exit(1)
                 # shrink with nearest neighbor (pixel-perfect)
-                rc, _, err = run(["magick", big, "-filter", "point",
-                                "-resize", f"{100/overs}%", str(png_path)])
+                rc, _, err = run([
+                    "magick", "PNG32:" + str(big),
+                    "-filter", "point", "-resize", f"{100/overs}%",
+                    "PNG32:" + str(png_path)
+                ])
                 if rc != 0:
                     print(f"ERROR: magick resize failed for {name}: {err}", file=sys.stderr)
                     sys.exit(1)
@@ -483,40 +479,25 @@ def main():
 
             run(["magick", str(png_path), "-posterize", "2", "-threshold", "50%", str(png_path)])
 
-            if stroke_px > 0:
-                if stroke_px >= 1:
-                    # Integer dilation in whole pixels (alpha-aware)
-                    k = int(stroke_px)
-                    rc, _, err = run([
-                        "magick", str(png_path),
-                        "(", "+clone", "-alpha", "extract",
-                        "-morphology", "Dilate", f"Octagon:{k}", ")",
-                        "-compose", "copy-opacity", "-composite",
-                        str(png_path)
-                    ])
-                else:
-                    # Subpixel “fine” growth via blur on alpha, then hard threshold
-                    # sigma tuned so 0.125–0.75 yields a gentle, non-blocky thicken
-                    sigma = round(stroke_px * 1.0, 3)
-                    rc, _, err = run([
-                        "magick", str(png_path),
-                        "(", "+clone", "-alpha", "extract",
-                        "-gaussian-blur", f"0x{sigma}", "-threshold", "50%", ")",
-                        "-compose", "copy-opacity", "-composite",
-                        str(png_path)
-                    ])
+            k = max(1, int(round(args.stroke_px))) if args.stroke_px else 0
+            if k > 0:
+                rc, _, err = run([
+                    "magick", "PNG32:" + str(png_path),
+                    "(", "+clone", "-alpha", "extract",
+                    "-morphology", "Dilate", f"Octagon:{k}", ")",
+                    "-compose", "copy-opacity", "-composite",
+                    "PNG32:" + str(png_path)
+                ])
                 if rc != 0:
                     print(f"ERROR: stroke step failed for {name}: {err}", file=sys.stderr)
                     sys.exit(1)
 
             if args.hard_threshold:
-                # Pure white/transparent; no AA leftovers
                 rc, _, err = run([
-                    "magick", str(png_path),
-                    "-alpha", "extract", "-threshold", "50%",  # 1-bit mask
-                    "(", "-clone", "0", "-fill", "white", "-colorize", "100", ")",
-                    "-compose", "copyopacity", "-composite",
-                    str(png_path)
+                    "magick", "PNG32:" + str(png_path),
+                    "(", "+clone", "-alpha", "extract", "-threshold", "50%", ")",
+                    "-compose", "copy-opacity", "-composite",
+                    "PNG32:" + str(png_path)
                 ])
                 if rc != 0:
                     print(f"ERROR: magick threshold failed for {name}: {err}", file=sys.stderr)
@@ -548,9 +529,9 @@ def main():
             "--sheet-border-padding", "0",
             "--sheet-spacing", "0",
             "--sheet-inner-padding", "0",
-            "--sheet-transparent-color", "0", "0", "0", "0",
-            # no --trim for fixed-grid baseline
-        ]
+            "--sheet-transparent-color", "0", "0", "0", "0"  # RGBA
+            # (do NOT pass --trim for fixed grid)
+            ]
 
 
         rc, sheet_stdout, err = run(sheet_cmd)
