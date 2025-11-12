@@ -137,6 +137,20 @@
 ./lib_to_aseprite_alt.py \
   --lib ./input/lib.plist \
   --glyphs-dir ./input/glyphs \
+  --out out/hack-16.aseprite \
+  --png-size 16 \
+  --cell-width 16 --cell-height 16 \
+  --fit em \
+  --derive-cell-from-advance \
+  --align left --pad-px 0 \
+  --oversample 8 --flatten-eps 1.0 \
+  --hard-threshold \
+  --map-out out/hack-16.json \
+  --debug
+
+./lib_to_aseprite_alt.py \
+  --lib ./input/lib.plist \
+  --glyphs-dir ./input/glyphs \
   --out out/hack-16-cap.png \
   --png-size 16 \
   --cell-width 16 --cell-height 16 \
@@ -149,5 +163,30 @@
   --map-out out/hack-16-cap.json \
   --debug
 
---fit cap --cap-height-px 13 --derive-cell-from-advance
+./lib_to_aseprite_alt.py \
+  --lib ./input/lib.plist \
+  --glyphs-dir ./input/glyphs \
+  --out out/hack-32.png \
+  --png-size 32 \
+  --cell-width 32 --cell-height 32 \
+  --fit em \
+  --derive-cell-from-advance \
+  --align left --pad-px 0 \
+  --oversample 8 --flatten-eps 1.0 \
+  --hard-threshold \
+  --map-out out/hack-32.json \
+  --debug
 
+./lib_to_aseprite_alt.py \
+  --lib ./input/lib.plist \
+  --glyphs-dir ./input/glyphs \
+  --out out/hack-8.png \
+  --png-size 8 \
+  --cell-width 8 --cell-height 8 \
+  --fit em \
+  --derive-cell-from-advance \
+  --align left --pad-px 0 \
+  --oversample 8 --flatten-eps 1.0 \
+  --hard-threshold \
+  --map-out out/hack-8.json \
+  --debug
