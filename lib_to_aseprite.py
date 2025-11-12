@@ -262,52 +262,62 @@ def write_svg(svg_path: Path, contours, *,
                    cap_height_px: float | None,
                    cell_w: int, cell_h: int,
                    pad_px: float, align: str, eps_px: float,
-                   debug: bool = False):
+                   debug: bool = False,
+                   debug_baseline: bool = False):
+    d = contours_to_svg_path(contours, eps_px=eps_px)
 
-    d = contours_to_svg_path(contours, eps_px=eps_px)  # flips Y already
-
-    # Scale: prefer capHeight if provided, else em box
+    # scale (cap or em) ...
     if cap_height_px and cap:
         scale = cap_height_px / float(cap)
-        if debug: print(f"[debug] scale by cap: {cap} → {scale:.4f}")
     else:
         em_h = asc - desc
         usable_h_px = max(1.0, cell_h - 2.0*pad_px)
         scale = usable_h_px / float(em_h)
-        if debug: print(f"[debug] scale by em: {em_h} → {scale:.4f}")
 
     pad_fu = pad_px / scale
     usable_w_px = max(1.0, cell_w - 2.0*pad_px)
     vw_fu = usable_w_px / scale
     vh_fu = (cell_h - 2.0*pad_px) / scale
 
-    # Vertical: put baseline at fixed position: pad + asc from the top
+    # baseline anchoring
     vx0_fu = -pad_fu
     vy0_fu = -(asc + pad_fu)
 
-    # Horizontal: align bbox left or center
+    # horizontal placement (left/center) ...
     if contours:
-        x0, _, x1, _ = bbox(contours)  # font units
+        x0, _, x1, _ = bbox(contours)
     else:
         x0 = x1 = 0.0
-    gx_mid = 0.5 * (x0 + x1)
-
+    gx_mid = 0.5*(x0 + x1)
     if align == "left":
-        # left edge of glyph bbox sits at pixel 0 (+pad if any)
         vx0_fu = x0 - pad_fu
     else:
-        usable_center_fu = (vx0_fu + pad_fu) + vw_fu * 0.5
+        usable_center_fu = (vx0_fu + pad_fu) + vw_fu*0.5
         dx = gx_mid - usable_center_fu
         vx0_fu += dx
+
+    # stroke-width is in *font units*; convert 1px -> font units
+    stroke_fu = 1.0 / max(1e-6, scale)
+    baseline_line = ""
+    if debug_baseline:
+        x1_fu = vx0_fu + vw_fu + 2*pad_fu
+        baseline_line = (
+            f'<line x1="{vx0_fu}" y1="0" x2="{x1_fu}" y2="0" '
+            f'stroke="yellow" stroke-opacity="0.9" '
+            f'stroke-width="{stroke_fu}" />'
+        )
+    # --------------------------------------------------------------
 
     svg = f'''<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg"
      width="{cell_w}" height="{cell_h}"
      viewBox="{vx0_fu} {vy0_fu} {vw_fu + 2*pad_fu} {vh_fu + 2*pad_fu}">
   <path d="{d}" fill="white" fill-rule="evenodd" />
+  {baseline_line}
 </svg>
 '''
     svg_path.write_text(svg, encoding="utf-8")
+
 
 def run(cmd):
     proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -340,6 +350,8 @@ def main():
                 help="Inner padding in px on all sides (default: 0)")
     ap.add_argument("--cap-height-px", type=float, default=None,
                 help="If set, scale so capHeight maps to this many pixels (else scale by em box)")
+    ap.add_argument("--debug-baseline", action="store_true",
+               help="Overlay a yellow 1px line at the baseline in each cell.")
 
 
     args = ap.parse_args()
@@ -430,7 +442,9 @@ def main():
                 cell_w=cell_w, cell_h=cell_h,
                 pad_px=args.pad_px, align=args.align,
                 eps_px=args.flatten_eps,
-                debug=args.debug)
+                debug=args.debug,
+                debug_baseline=args.debug_baseline,
+            )
 
             png_path = pngs_dir / f"{base}.png"
             os.environ["CAIRO_ANTIALIAS"] = "none"

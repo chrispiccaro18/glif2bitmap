@@ -104,6 +104,19 @@
   --cell-width 16 --cell-height 16 \
   --align left --pad-px 0 \
   --oversample 8 --flatten-eps 1.0 \
-  --stroke-px 0.12 --hard-threshold \
+  --hard-threshold \
   --map-out out/font-16-grid.json \
   --debug
+
+./lib_to_aseprite.py \
+  --lib ./input/lib.plist \
+  --glyphs-dir ./input/glyphs \
+  --out out/font-16-grid-base.png \
+  --png-size 16 \
+  --cell-width 16 --cell-height 16 \
+  --align left --pad-px 0 \
+  --oversample 8 --flatten-eps 1.0 \
+  --hard-threshold \
+  --map-out out/font-16-grid-base.json \
+  --debug --debug-baseline
+
