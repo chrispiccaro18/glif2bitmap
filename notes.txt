@@ -120,3 +120,35 @@
   --map-out out/font-16-grid-base.json \
   --debug --debug-baseline
 
+./lib_to_aseprite_alt.py \
+  --lib ./input/lib.plist \
+  --glyphs-dir ./input/glyphs \
+  --out out/hack-16.png \
+  --png-size 16 \
+  --cell-width 16 --cell-height 16 \
+  --fit em \
+  --derive-cell-from-advance \
+  --align left --pad-px 0 \
+  --oversample 8 --flatten-eps 1.0 \
+  --hard-threshold \
+  --map-out out/hack-16.json \
+  --debug
+
+./lib_to_aseprite_alt.py \
+  --lib ./input/lib.plist \
+  --glyphs-dir ./input/glyphs \
+  --out out/hack-16-cap.png \
+  --png-size 16 \
+  --cell-width 16 --cell-height 16 \
+  --fit cap \
+  --cap-height-px 13 \
+  --derive-cell-from-advance \
+  --derive-cell-from-advance \
+  --align left --pad-px 0 \
+  --oversample 8 --flatten-eps 1.0 \
+  --hard-threshold \
+  --map-out out/hack-16-cap.json \
+  --debug
+
+--fit cap --cap-height-px 13 --derive-cell-from-advance
+
