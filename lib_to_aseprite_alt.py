@@ -75,14 +75,24 @@ def read_contents_mapping(glyphs_dir: Path):
         return plistlib.load(f)  # {glyphName: fileName.glif}
 
 def resolve_glif_path(glyph_name: str, glyphs_dir: Path, contents_map: dict, allow_fallback=True):
+    # 1) contents.plist mapping
     if glyph_name in contents_map:
         p = glyphs_dir / contents_map[glyph_name]
         return (p if p.exists() else None, "contents")
+
+    # 2) naive name.glif
     p = glyphs_dir / f"{glyph_name}.glif"
-    if p.exists(): return (p, "name")
-    if not allow_fallback: return (None, "missing")
-    p2 = glyphs_dir / f"{glyph_name}_.glif"  # common uppercase convention
-    if p2.exists(): return (p2, "underscore")
+    if p.exists():
+        return (p, "name")
+
+    if not allow_fallback:
+        return (None, "missing")
+
+    # 3) uppercase stored as Name_.glif
+    p2 = glyphs_dir / f"{glyph_name}_.glif"
+    if p2.exists():
+        return (p2, "underscore")
+
     return (None, "missing")
 
 def read_glyph_order(lib_plist: Path):
@@ -398,7 +408,8 @@ def main():
                 print(f"[debug] glyph {name}: contours={cc}, points={pts}, cubic={has_c}, quad={has_q}")
 
             # write per-glyph SVG cell
-            svg_path = svgs_dir / f"{name}.svg"
+            base = Path(glif_path).stem
+            svg_path = svgs_dir / f"{base}.svg"
             write_svg_cell(svg_path, contours,
                            asc=ASC, desc=DESC, cap=CAP, cap_height_px=args.cap_height_px,
                            cell_w=cell_w, cell_h=cell_h,
@@ -408,7 +419,7 @@ def main():
                            fit=args.fit, preset_scale=SCALE)
 
             # rasterize to PNG (transparent)
-            png_big = pngs_dir / f"{name}_x{args.oversample}.png"
+            png_big = pngs_dir / f"{base}_x{args.oversample}.png"
             w_big = cell_w * max(1, args.oversample)
             cmd = [rsvg, "--width", str(w_big), "--keep-aspect-ratio",
                    "-o", str(png_big), str(svg_path)]
@@ -416,29 +427,33 @@ def main():
             if rc != 0:
                 print(f"ERROR: rsvg-convert failed for {name}: {err}", file=sys.stderr); sys.exit(1)
 
-            # downscale & threshold / stroke (ImageMagick if present)
-            png_final = pngs_dir / f"{name}.png"
+            png_final = pngs_dir / f"{base}.png"
             if args.oversample > 1 or args.hard_threshold or args.stroke_px > 0:
                 if not magick:
-                    # fallback: just copy; you won't get threshold/ stroke
                     shutil.copyfile(png_big, png_final)
                 else:
-                    # build IM command
                     im = [magick, str(png_big)]
-                    # downscale back to cell_w with nearest-neighbor (preserve pixels)
+                    # Downscale with nearest-neighbor to preserve pixel edges
                     im += ["-filter", "point", "-resize", f"{cell_w}x{cell_h}!"]
+
+                    # IMPORTANT: modify ALPHA ONLY, keep RGB as-is (white glyph, transparent elsewhere)
                     if args.hard_threshold:
-                        # force alpha to hard edges: anything >0 becomes 100%
-                        im += ["-alpha", "extract", "-threshold", "0", "-alpha", "on"]
+                        # Anything nonzero alpha becomes fully opaque, rest fully transparent
+                        im += ["-alpha", "on", "-channel", "A", "-threshold", "0", "+channel"]
+
                     if args.stroke_px > 0:
-                        # IM7 syntax prefers: -morphology Dilate Octagon:N
-                        # approximate radius via Octagon:N (N ~ pixels)
+                        # Dilate the ALPHA channel only (avoid painting black RGB)
                         N = max(1, int(round(args.stroke_px)))
-                        im += ["-morphology", f"Dilate:1", f"Octagon:{N}"]
-                    im += [str(png_final)]
+                        im += ["-alpha", "on", "-channel", "A",
+                              "-morphology", "Dilate", f"Octagon:{N}",
+                              "+channel"]
+
+                    # Ensure 32-bit RGBA write (keeps alpha)
+                    im += [f"PNG32:{png_final}"]
                     rc, out, err = run(im)
                     if rc != 0:
-                        print(f"ERROR: ImageMagick failed for {name}: {err}", file=sys.stderr); sys.exit(1)
+                        print(f"ERROR: ImageMagick failed for {name}: {err}", file=sys.stderr)
+                        sys.exit(1)
             else:
                 shutil.copyfile(png_big, png_final)
 

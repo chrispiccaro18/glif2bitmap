@@ -143,7 +143,6 @@
   --fit cap \
   --cap-height-px 13 \
   --derive-cell-from-advance \
-  --derive-cell-from-advance \
   --align left --pad-px 0 \
   --oversample 8 --flatten-eps 1.0 \
   --hard-threshold \
